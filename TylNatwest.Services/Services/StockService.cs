@@ -20,6 +20,7 @@ namespace TylNatwest.Services.Services
             new TradeTransaction { TickerSymbol = "AMZN", PriceInPound = 3500.50, Shares = 22, BrokerID = "B3", TradeID = "4", Timestamp = DateTime.Now.AddMinutes(-8) },
             new TradeTransaction { TickerSymbol = "TSLA", PriceInPound = 750.00, Shares = 79, Timestamp = DateTime.Now.AddMinutes(-14), TradeID = "5", BrokerID = "B3" }
         };
+
         public decimal GetStockPrice(string tickerSymbol)
         {
             try
