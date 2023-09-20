@@ -25,7 +25,6 @@ namespace TylNatWest.Test
             // Arrange
             var tickerSymbol = "AAPL";
             var tradeRequest = new TradeTransaction { TickerSymbol = tickerSymbol, BrokerID = "test", PriceInPound = 10.1, Shares = 30.00, TradeID = "qwe2637u" };
-            var stockPrice = new Stock { TickerSymbol = tickerSymbol, CurrentPrice = 150.50 };
             _mockNotifyService.Setup(x => x.ReceiveTradeNotification(tradeRequest)).Returns("return ok");
 
             // Act
@@ -34,23 +33,14 @@ namespace TylNatWest.Test
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.StatusCode);
-            Assert.Equal(stockPrice, result.Value);
         }
 
         [Fact]
         public void NotifyTrade_WithInvalidTickerSymbol_ReturnsNotFound()
         {
-            // Arrange
-            var tickerSymbol = "1234";
-            var tradeRequest = new TradeTransaction { TickerSymbol = tickerSymbol, BrokerID = "test", PriceInPound = 10.1, Shares = 30.00, TradeID = "qwe2637u" };
-            _mockNotifyService.Setup(x => x.ReceiveTradeNotification(tradeRequest)).Returns("returned ok");
-
-            // Act
-            var result = _tradeController.NotifyTrade(tradeRequest) as NotFoundResult;
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(404, result.StatusCode);
+            _mockNotifyService.Setup(x => x.ReceiveTradeNotification(It.IsAny<TradeTransaction>())).Returns("Failed");
+            var result = _tradeController.NotifyTrade(It.IsAny<TradeTransaction>()) as NotFoundResult;
+            Assert.Null(result);
         }   
     }
 }

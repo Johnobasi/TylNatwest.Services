@@ -17,20 +17,24 @@ namespace TylNatWest.API.Controllers
         }
 
         [HttpPost("trade")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult NotifyTrade([FromBody] TradeTransaction request)
         {
           
+                if (request == null)
+                {
+                        return BadRequest("Invalid trade data");
+                }
+                
                 if (string.IsNullOrEmpty(request.TickerSymbol))
                 {
-                    return BadRequest();
+                    return BadRequest("TickerSymbol cannot be empty");
                 }
 
                 string result = _tradeNotify.ReceiveTradeNotification(request);
                 if (result == "Invalid trade data")
                 {
                     _logger.LogInformation($"Stock price for {request.TickerSymbol} not found");
-                return BadRequest();
+                      return BadRequest();
                 }
 
                 return Ok(result);

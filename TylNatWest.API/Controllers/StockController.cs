@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +31,7 @@ namespace TylNatWest.API.Controllers
 
             var stockPrice = _stockService.GetStockPrice(tickerSymbol);
 
-            if (stockPrice == 0m)
+            if (stockPrice == null)
             {
                 _logger.LogInformation($"Stock price for {tickerSymbol} not found");
                 return NotFound();

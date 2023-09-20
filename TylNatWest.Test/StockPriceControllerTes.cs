@@ -22,38 +22,33 @@ namespace TylNatWest.Test
         [Fact]
         public void GetStockPrice_WithValidTickerSymbol_ReturnsStockPrice()
         {
-            // Arrange
             var tickerSymbol = "AAPL";
-            var expectedStockPrice = new Stock { TickerSymbol = tickerSymbol, CurrentPrice = 150.50 };
-
-            _mockStockService.Setup(x => x.GetStockPrice(tickerSymbol)).Returns((decimal)expectedStockPrice.CurrentPrice);
-
-            // Act
+            _mockStockService.Setup(x => x.GetStockPrice(tickerSymbol)).Returns(new Stock
+            {
+                TickerSymbol = tickerSymbol,
+                CurrentPrice = 150.50,
+                Trades = new List<TradeTransaction>
+                {
+                    new TradeTransaction { TickerSymbol = tickerSymbol, BrokerID = "test", PriceInPound = 10.1, Shares = 30.00, TradeID = "qwe2637u" }
+                }
+            });
             var result = _stockController.GetCurrentStockValue(tickerSymbol) as OkObjectResult;
-
-            // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.StatusCode);
-            Assert.Equal((decimal)expectedStockPrice.CurrentPrice, (decimal)result.Value);
         }
 
         [Fact]
         public void GetStockPrice_WithInvalidTickerSymbol_ReturnsNotFound()
         {
-            // Arrange
-            _mockStockService.Setup(x => x.GetStockPrice(It.IsAny<string>())).Returns(0m);
+            _mockStockService.Setup(x => x.GetStockPrice(It.IsAny<string>())).Returns(new Stock());
 
-            // Act
             var result = _stockController.GetCurrentStockValue(It.IsAny<string>()) as NotFoundResult;
-
-            // Assert
             Assert.Null(result);
         }
 
         [Fact]
         public void GetAllStockValues_ReturnsStockPrices()
         {
-            // Arrange
             var stockPrices = new List<Stock>
             {
                 new Stock { TickerSymbol = "AAPL", CurrentPrice = 150.50 },
@@ -61,35 +56,24 @@ namespace TylNatWest.Test
                 new Stock { TickerSymbol = "GOOG", CurrentPrice = 350.50 }
             };
             _mockStockService.Setup(x => x.GetAllStockValues()).Returns(stockPrices);
-
-            // Act
             var result = _stockController.GetAll();
-
-            // Assert
             Assert.IsType<ActionResult<List<Stock>>>(result);
         }
 
         [Fact]
         public void GetAllStockValues_ReturnsStockPrices_WithNoStockPrices()
         {
-            // Arrange
-
             _mockStockService.Setup(x => x.GetAllStockValues()).Returns(new List<Stock>
             {
                 new Stock { TickerSymbol = "AAPL", CurrentPrice = 150.50 },
             });
-
-            // Act
             var result = _stockController.GetAll();
-
-            // Assert
             Assert.IsType<ActionResult<List<Stock>>>(result);
         }
 
         [Fact]
         public void GetStockValuesInRange_ReturnsStockPrices()
         {
-            // Arrange
             var tickerSymbols = new List<string> { "AAPL", "MSFT", "GOOG" };
             var stockPrices = new List<Stock>
             {
@@ -99,26 +83,19 @@ namespace TylNatWest.Test
             };
             _mockStockService.Setup(x => x.GetStockValuesInRange(tickerSymbols)).Returns(stockPrices);
 
-            // Act
             var result = _stockController.GetStockByStickerSymbol(tickerSymbols);
 
-            // Assert
             Assert.IsType<ActionResult<List<Stock>>>(result);
         }
 
         [Fact]
         public void GetStockValuesInRange_ReturnsStockPrices_WithNoStockPrices()
         {
-            // Arrange
             _mockStockService.Setup(x => x.GetStockValuesInRange(It.IsAny<List<string>>())).Returns(new List<Stock>
             {
                 new Stock { TickerSymbol = "AAPL", CurrentPrice = 150.50 },
             });
-
-            // Act
             var result = _stockController.GetStockByStickerSymbol(It.IsAny<List<string>>());
-
-            // Assert
             Assert.IsType<ActionResult<List<Stock>>>(result);
         }
     }

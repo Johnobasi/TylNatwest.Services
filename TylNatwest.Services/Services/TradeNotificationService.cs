@@ -6,9 +6,13 @@ namespace TylNatwest.Services.Services
     public class TradeNotificationService : INotifyTrade
     {
 
-        private readonly List<Stock> stocks = new List<Stock>();
-        private readonly List<Broker> brokers = new List<Broker>();
-
+        private readonly List<Stock> stocks;
+        private readonly List<Broker> brokers;
+        public TradeNotificationService()
+        {
+            stocks = new List<Stock>();
+            brokers = new List<Broker>();
+        }
         public string ReceiveTradeNotification(TradeTransaction request)
         {
 
@@ -26,6 +30,15 @@ namespace TylNatwest.Services.Services
                     TickerSymbol = request.TickerSymbol,
                     CurrentPrice = 0,
                     Trades = new List<TradeTransaction>()
+                    {
+                        new TradeTransaction
+                        {
+                            BrokerID = "1",
+                            TickerSymbol = "GOOGL",
+                            PriceInPound = 100,
+                            Timestamp = DateTime.UtcNow
+                        }
+                    }
                 };
                 stocks.Add(stock);
             }
@@ -38,10 +51,18 @@ namespace TylNatwest.Services.Services
                     BrokerId = request.BrokerID,
                     BrokerName = "B1", 
                     BrokerAddress = "London",
-                    Trades = new List<TradeTransaction>()
+                    Trades = new List<TradeTransaction>() { new TradeTransaction
+                                           {
+                            BrokerID = "1",
+                            TickerSymbol = "TSLA",
+                            PriceInPound = 100,
+                            Timestamp = DateTime.UtcNow
+                        }
+                    }
                 };
                 brokers.Add(broker);
             }
+
             // add the trade to the stock and broker
             request.Stock = stock;
             request.Timestamp = DateTime.UtcNow;
