@@ -27,7 +27,7 @@ namespace TylNatWest.Test
             {
                 TickerSymbol = tickerSymbol,
                 CurrentPrice = 150.50,
-                Trades = new List<TradeTransaction>
+                TradeTransaction = new List<TradeTransaction>
                 {
                     new TradeTransaction { TickerSymbol = tickerSymbol, BrokerID = "test", PriceInPound = 10.1, Shares = 30.00, TradeID = "qwe2637u" }
                 }

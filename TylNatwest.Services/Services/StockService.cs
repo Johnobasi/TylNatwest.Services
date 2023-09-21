@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using TylNatwest.Services.Contracts;
 using TylNatwest.Services.Models;
 
@@ -7,44 +8,31 @@ namespace TylNatwest.Services.Services
     public class StockService : IStock
     {
         private readonly ILogger<StockService> _logger;
-        public StockService(ILogger<StockService> logger)
+        private readonly DataContext _dataContext;
+        public StockService(ILogger<StockService> logger, DataContext dataContext)
         {
             _logger = logger;    
+            _dataContext = dataContext;
         }
 
-        List<TradeTransaction> tradeTransactions = new List<TradeTransaction>
-        {
-            new TradeTransaction { TickerSymbol = "AAPL", PriceInPound = 150.50, Shares = 14 , BrokerID = "B1", Timestamp = DateTime.Now.AddMinutes(-10), TradeID = "1", Stock = new Stock() },
-            new TradeTransaction { TickerSymbol = "GOOGL", PriceInPound = 2700.75, Shares = 60, BrokerID = "B2", TradeID = "2", Timestamp = DateTime.Now.AddMinutes(-5), Stock = new Stock() },
-            new TradeTransaction { TickerSymbol = "MSFT", PriceInPound = 300.25, Shares = 34, Timestamp = DateTime.Now.AddMinutes(-3), TradeID = "3", BrokerID = "B1", Stock = new Stock() },
-            new TradeTransaction { TickerSymbol = "AMZN", PriceInPound = 3500.50, Shares = 22, BrokerID = "B3", TradeID = "4", Timestamp = DateTime.Now.AddMinutes(-8), Stock = new Stock() },
-            new TradeTransaction { TickerSymbol = "TSLA", PriceInPound = 750.00, Shares = 79, Timestamp = DateTime.Now.AddMinutes(-14), TradeID = "5", BrokerID = "B3", Stock = new Stock() }
-        };
 
         public Stock GetStockPrice(string tickerSymbol)
         {
+
             try
             {
-                var tradeResult = tradeTransactions.Where(x => x.TickerSymbol == tickerSymbol.ToUpper())
-                                                   .OrderByDescending(x => x.Timestamp)
-                                                   .Select(s=> new TradeTransaction
-                                                   {
-                                                       PriceInPound = s.PriceInPound,
-                                                       TickerSymbol = s.TickerSymbol,
-                                                       Shares = s.Shares,
-                                                       Timestamp = s.Timestamp                                                      
-                                                   }).ToList();
-                if (tradeResult.Count == 0)
+                var selectedStocksInfo = new List<Stock>();
+                var tradeResult = _dataContext.Stocks.Where(x => x.TickerSymbol == tickerSymbol.ToUpper()).FirstOrDefault();
+                if (tradeResult == null)
                 {
                     throw new InvalidOperationException("No trade found");
                 }
 
-                var currentPrice = tradeResult[0].PriceInPound;
                 var stock = new Stock
                 {
                     TickerSymbol = tickerSymbol,
-                    CurrentPrice = currentPrice,
-                    Trades = tradeResult
+                    CurrentPrice = tradeResult.CurrentPrice,
+                    TradeTransaction = tradeResult.TradeTransaction
                 };
 
                 return stock;
@@ -52,7 +40,7 @@ namespace TylNatwest.Services.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error getting stock info for {tickerSymbol}: {ex.Message}");
-                return new Stock();
+                return null; // I return null here to indicate an error
             }
 
         }
@@ -62,32 +50,38 @@ namespace TylNatwest.Services.Services
             try
             {
                 var selectedStocksInfo = new List<Stock>();
-                foreach (var tickedSymbol in tradeTransactions)
+                var stockResult = _dataContext.Stocks.Where(x=> tickerSymbols.Contains(x.TickerSymbol)).ToList();
+                if (stockResult != null)
                 {
-                    var stockValues = tradeTransactions.Where(x => tickerSymbols.Contains(x.TickerSymbol))
-                                                .OrderByDescending(x => x.Timestamp)
-                                                .FirstOrDefault();
-
-                    decimal currentPrice = 0;
-                    if (stockValues != null)
+                    foreach (var stock in stockResult)
                     {
-                        currentPrice = (decimal)stockValues.PriceInPound;
+
+                        decimal currentPrice = 0;
+                        // Assuming that stock has a collection of trade transactions
+                        if (stock.TradeTransaction != null && stock.TradeTransaction.Any())
+                        {
+                            // Calculate the current price based on the most recent trade
+                            currentPrice = (decimal)stock.TradeTransaction
+                                .OrderByDescending(transaction => transaction.Timestamp)
+                                .First().PriceInPound;
+                        }
+
+                        var stockInfo = new Stock
+                        {
+                            TickerSymbol = stock.TickerSymbol,
+                            CurrentPrice = (double)currentPrice
+                        };
+
+                        selectedStocksInfo.Add(stockInfo);
+
                     }
-                    var stockInfo = new Stock
-                    {
-                        TickerSymbol = tickedSymbol.TickerSymbol,
-                        CurrentPrice = (double)currentPrice
-                    };
-
-                    selectedStocksInfo.Add(stockInfo);
-        
                 }
-            
                 return selectedStocksInfo;
+
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error getting range of stock price for {tickerSymbols}: {ex.Message}");
+                _logger.LogError($"Error getting range of stock prices for {string.Join(", ", tickerSymbols)}: {ex.Message}");
                 return new List<Stock>();
             }
 
@@ -98,22 +92,25 @@ namespace TylNatwest.Services.Services
             try
             {
                 var allStocksInfo = new List<Stock>();
-                foreach (var tickerSymbol in tradeTransactions)
+                var stockResult = _dataContext.Stocks.ToList();
+                foreach (var tickerSymbol in stockResult)
                 {
                     var stock = GetStockPrice(tickerSymbol.TickerSymbol);
-                    allStocksInfo.Add(stock);
 
+                    // Calculate the current price if there are trade transactions
                     decimal currentPrice = 0;
-                    if (stock.Trades.Count > 0)
+                    if (stock.TradeTransaction.Count > 0)
                     {
-                        currentPrice = (decimal)stock.Trades[0].PriceInPound;
+                        //get the most recent trade's price
+                        currentPrice = (decimal)stock.TradeTransaction.OrderByDescending(t => t.Timestamp).First().PriceInPound;
                     }
 
+                    // Create a new Stock object with the calculated current price
                     var stockInfo = new Stock
                     {
                         TickerSymbol = tickerSymbol.TickerSymbol,
                         CurrentPrice = (double)currentPrice,
-                        Trades = stock.Trades
+                        TradeTransaction = stock.TradeTransaction
                     };
 
                     allStocksInfo.Add(stockInfo);

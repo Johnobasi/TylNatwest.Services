@@ -6,12 +6,10 @@ namespace TylNatwest.Services.Services
     public class TradeNotificationService : INotifyTrade
     {
 
-        private readonly List<Stock> stocks;
-        private readonly List<Broker> brokers;
-        public TradeNotificationService()
+        private readonly DataContext _context;
+        public TradeNotificationService(DataContext context)
         {
-            stocks = new List<Stock>();
-            brokers = new List<Broker>();
+            _context = context;   
         }
         public string ReceiveTradeNotification(TradeTransaction request)
         {
@@ -22,56 +20,39 @@ namespace TylNatwest.Services.Services
             }
 
             // Check if the stock and broker exist, create them if not
-            Stock stock = stocks.Find(c=>c.TickerSymbol == request.TickerSymbol);
+            var stock = _context.Stocks.FirstOrDefault(x => x.TickerSymbol == request.TickerSymbol);
             if (stock == null)
             {
                 stock = new Stock
                 {
                     TickerSymbol = request.TickerSymbol,
                     CurrentPrice = 0,
-                    Trades = new List<TradeTransaction>()
-                    {
-                        new TradeTransaction
-                        {
-                            BrokerID = "1",
-                            TickerSymbol = "GOOGL",
-                            PriceInPound = 100,
-                            Timestamp = DateTime.UtcNow
-                        }
-                    }
+                    TradeTransaction = new List<TradeTransaction>()
                 };
-                stocks.Add(stock);
+                _context.Stocks.Add(stock);
             }
 
-            Broker broker = brokers.Find(b => b.BrokerId == request.BrokerID);
-            if (broker == null)
+            // Create a new trade entry and associate it with the stock and broker
+            var newTrade = new TradeTransaction
             {
-                broker = new Broker
-                {
-                    BrokerId = request.BrokerID,
-                    BrokerName = "B1", 
-                    BrokerAddress = "London",
-                    Trades = new List<TradeTransaction>() { new TradeTransaction
-                                           {
-                            BrokerID = "1",
-                            TickerSymbol = "TSLA",
-                            PriceInPound = 100,
-                            Timestamp = DateTime.UtcNow
-                        }
-                    }
-                };
-                brokers.Add(broker);
-            }
+                TradeID = Guid.NewGuid().ToString(), // Generate a unique trade ID
+                TickerSymbol = request.TickerSymbol,
+                PriceInPound = request.PriceInPound,
+                Shares = request.Shares,
+                BrokerID = request.BrokerID,
+                Timestamp = DateTime.UtcNow
+            };
 
-            // add the trade to the stock and broker
-            request.Stock = stock;
-            request.Timestamp = DateTime.UtcNow;
-            stock.Trades.Add(request);
-            broker.Trades.Add(request);
-            
-            // update the stock price
+            _context.TradeTransactions.Add(newTrade);
+
+            // Update the stock's current price
             stock.CurrentPrice = request.PriceInPound;
+
+            // Save changes to the database
+            _context.SaveChanges();
+
             return "Trade notification received and processed";
+
         }
     }
 }

@@ -1,33 +1,79 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace TylNatwest.Services.Models
 {
     public class StockExchangeDataManager
     {
-        private Dictionary<string, Stock> Stocks { get; }
-        private Dictionary<string, Broker> Brokers { get; }
+        private readonly IServiceProvider _serviceProvider;
 
-        public StockExchangeDataManager()
+        public StockExchangeDataManager(IServiceProvider serviceProvider)
         {
-            Stocks = new Dictionary<string, Stock>();
-            Brokers = new Dictionary<string, Broker>();
-            InitializeTestData();
+            _serviceProvider = serviceProvider;
         }
 
-        private void InitializeTestData()
+
+
+        public void SeedData()
         {
-            // Initialize some test data for test purposes
-            var stock1 = new Stock { TickerSymbol = "AAPL", CurrentPrice = 150.00, Trades = new List<TradeTransaction>() };
-            var stock2 = new Stock { TickerSymbol = "GOOGL", CurrentPrice = 2800.00, Trades = new List<TradeTransaction>() };
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                var existingBroker = context.Brokers.FirstOrDefault(b => b.BrokerId == "B1");
+                if (existingBroker == null)
+                {
+                    var broker1 = new Broker
+                    {
+                        BrokerId = "B1",
+                        BrokerName = "Broker One",
+                        BrokerAddress = "123 Main Street, New York",
+                        Stocks = new List<Stock>
+                  {
+                    new Stock
+                    {
+                        TickerSymbol = "AAPL",
+                        CurrentPrice = 150.50
+                    },
+                    new Stock
+                    {
+                        TickerSymbol = "GOOGL",
+                        CurrentPrice = 2700.75
+                    },
+                    new Stock
+                    {
+                        TickerSymbol = "MSFT",
+                        CurrentPrice = 300.25
+                    }
+                 }
+                    };
+                    var broker2 = new Broker
+                    {
+                        BrokerAddress = "456 Main Street, New York",
+                        BrokerId = "B2",
+                        BrokerName = "Broker Two",
+                        Stocks = new List<Stock>
+                    {
+                        new Stock
+                        {
+                            TickerSymbol = "AMZN",
+                            CurrentPrice = 3500.50
+                        },
+                        new Stock
+                        {
+                            TickerSymbol = "TSLA",
+                            CurrentPrice = 750.00
+                        }
+                    }
+                    };
+                    context.Brokers.AddRange(broker1, broker2);
+                }
 
-            var broker1 = new Broker { BrokerId = "B001", BrokerName = "Broker1", BrokerAddress = "123 Main St", Trades = new List<TradeTransaction>() };
-            var broker2 = new Broker { BrokerId = "B002", BrokerName = "Broker2", BrokerAddress = "456 Elm St", Trades = new List<TradeTransaction>() };
+                
 
-            Stocks.Add(stock1.TickerSymbol, stock1);
-            Stocks.Add(stock2.TickerSymbol, stock2);
-
-            Brokers.Add(broker1.BrokerId, broker1);
-            Brokers.Add(broker2.BrokerId, broker2);
+                context.SaveChanges();
+            }
         }
     }
+
 }
+

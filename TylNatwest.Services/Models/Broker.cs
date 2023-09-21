@@ -11,6 +11,6 @@ namespace TylNatwest.Services.Models
         public string BrokerId { get; set; }
         public string BrokerName { get; set; }
         public string BrokerAddress { get; set; }
-        public List<TradeTransaction> Trades { get; set; }
+        public List<Stock> Stocks { get; set; }
     }
 }
