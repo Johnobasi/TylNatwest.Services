@@ -51,8 +51,8 @@ namespace TylNatwest.Services.Services
             // Save changes to the database
             _context.SaveChanges();
 
-            return "Trade notification received and processed";
-
+            //return updated stock price
+            return stock.CurrentPrice.ToString();
         }
     }
 }
