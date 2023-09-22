@@ -26,7 +26,7 @@ namespace TylNatWest.API.Controllers
 
             if (string.IsNullOrWhiteSpace(tickerSymbol))
             {
-                return BadRequest();
+               return BadRequest();
             }
 
             var stockPrice = _stockService.GetStockPrice(tickerSymbol);
@@ -34,7 +34,6 @@ namespace TylNatWest.API.Controllers
             if (stockPrice == null)
             {
                 _logger.LogInformation($"Stock price for {tickerSymbol} not found");
-                return NotFound();
             }
             return Ok(stockPrice);
 

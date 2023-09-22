@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using TylNatwest.Services.Contracts;
 using TylNatwest.Services.Models;
 
@@ -21,21 +23,41 @@ namespace TylNatwest.Services.Services
 
             try
             {
-                var selectedStocksInfo = new List<Stock>();
-                var tradeResult = _dataContext.Stocks.Where(x => x.TickerSymbol == tickerSymbol.ToUpper()).FirstOrDefault();
+                var tradeResult = _dataContext.Stocks
+                    .Include(x=>x.Broker)
+                        .Include(C=>C.TradeTransaction)
+                            .Where(x => x.TickerSymbol == tickerSymbol.ToUpper())
+                                .FirstOrDefault();
                 if (tradeResult == null)
                 {
                     throw new InvalidOperationException("No trade found");
                 }
 
-                var stock = new Stock
-                {
+                 var stocks = new Stock
+                 {
                     TickerSymbol = tickerSymbol,
                     CurrentPrice = tradeResult.CurrentPrice,
-                    TradeTransaction = tradeResult.TradeTransaction
-                };
+                        Broker = tradeResult.Broker != null ? new Broker
+                        {
+                            BrokerId  = "T3",
+                            BrokerName = "TESTING",
+                            BrokerAddress = "London"
+                        } : null, 
+                    TradeTransaction = tradeResult.TradeTransaction != null && tradeResult.TradeTransaction.Any()? tradeResult.TradeTransaction.Select(trade => new TradeTransaction
+                    {
+                        BrokerID = "T3",
+                        PriceInPound = tradeResult.CurrentPrice, 
+                        Timestamp = DateTime.UtcNow,
+                        Id = 90,
+                        Shares = 20,
+                        TickerSymbol = tradeResult.TickerSymbol,
+                        TradeID = tradeResult.Id.ToString()
+                    }).ToList()
+                    : null // Handle null TradeTransaction
+                    
+                 };
 
-                return stock;
+                return stocks;
             }
             catch (Exception ex)
             {
@@ -50,7 +72,7 @@ namespace TylNatwest.Services.Services
             try
             {
                 var selectedStocksInfo = new List<Stock>();
-                var stockResult = _dataContext.Stocks.Where(x=> tickerSymbols.Contains(x.TickerSymbol)).ToList();
+                var stockResult = _dataContext.Stocks.Include(x=>x.Broker).Where(x=> tickerSymbols.Contains(x.TickerSymbol)).ToList();
                 if (stockResult != null)
                 {
                     foreach (var stock in stockResult)
@@ -69,7 +91,20 @@ namespace TylNatwest.Services.Services
                         var stockInfo = new Stock
                         {
                             TickerSymbol = stock.TickerSymbol,
-                            CurrentPrice = (double)currentPrice
+                            CurrentPrice = (double)currentPrice,
+                            TradeTransaction = new List<TradeTransaction>
+                            {
+                              new TradeTransaction
+                              {
+                                Shares = 10,
+                                BrokerID = stock.Broker.BrokerId,
+                                Timestamp = DateTime.UtcNow,
+                                PriceInPound = (double)currentPrice,
+                                TickerSymbol = stock.TickerSymbol
+                              }
+                            },
+                            Broker = stock.Broker,
+                            Id = stock.Id
                         };
 
                         selectedStocksInfo.Add(stockInfo);
@@ -92,17 +127,16 @@ namespace TylNatwest.Services.Services
             try
             {
                 var allStocksInfo = new List<Stock>();
-                var stockResult = _dataContext.Stocks.ToList();
+                var stockResult = _dataContext.Stocks.Include(x => x.Broker).Include(c=>c.TradeTransaction).ToList();
                 foreach (var tickerSymbol in stockResult)
                 {
-                    var stock = GetStockPrice(tickerSymbol.TickerSymbol);
 
                     // Calculate the current price if there are trade transactions
                     decimal currentPrice = 0;
-                    if (stock.TradeTransaction.Count > 0)
+                    if (tickerSymbol.TradeTransaction != null && tickerSymbol.TradeTransaction.Count > 0)
                     {
                         //get the most recent trade's price
-                        currentPrice = (decimal)stock.TradeTransaction.OrderByDescending(t => t.Timestamp).First().PriceInPound;
+                        currentPrice = (decimal)tickerSymbol.TradeTransaction.OrderByDescending(t => t.Timestamp).First().PriceInPound;
                     }
 
                     // Create a new Stock object with the calculated current price
@@ -110,7 +144,20 @@ namespace TylNatwest.Services.Services
                     {
                         TickerSymbol = tickerSymbol.TickerSymbol,
                         CurrentPrice = (double)currentPrice,
-                        TradeTransaction = stock.TradeTransaction
+                        TradeTransaction = new List<TradeTransaction>
+                        {
+                              new TradeTransaction
+                              {
+                                Shares = 10,
+                                BrokerID = tickerSymbol.Broker.BrokerId,
+                                Timestamp = DateTime.UtcNow,
+                                PriceInPound = (double)currentPrice,
+                                TickerSymbol = tickerSymbol.TickerSymbol
+                              }
+                        },
+                        Broker = tickerSymbol.Broker,
+                        Id = tickerSymbol.Id                       
+
                     };
 
                     allStocksInfo.Add(stockInfo);

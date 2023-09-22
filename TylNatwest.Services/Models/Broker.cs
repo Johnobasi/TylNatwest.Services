@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TylNatwest.Services.Models
+﻿namespace TylNatwest.Services.Models
 {
     public class Broker
     {
@@ -12,5 +6,6 @@ namespace TylNatwest.Services.Models
         public string BrokerName { get; set; }
         public string BrokerAddress { get; set; }
         public List<Stock> Stocks { get; set; }
+        public List<TradeTransaction> TradeTransactions { get; set; } = new List<TradeTransaction>();
     }
 }
